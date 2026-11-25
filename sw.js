@@ -1,5 +1,5 @@
 // DayFlow service worker: keeps the app usable offline.
-const CACHE = 'dayflow-v4';
+const CACHE = 'dayflow-v5';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -31,6 +31,15 @@ self.addEventListener('fetch', e => {
       return res;
     })));
   }
+});
+
+// Reminders sent by the Supabase edge function "send-alerts"
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { title: 'DayFlow', body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'DayFlow', {
+    body: d.body || '', tag: d.tag || undefined, icon: 'icon-192.png', badge: 'icon-192.png', data: { url: './' }
+  }));
 });
 
 self.addEventListener('notificationclick', e => {
