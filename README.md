@@ -12,16 +12,16 @@ University students know *what* they have to do, but struggle to decide *when* t
 
 ## Features
 
-- **Automatic planning.** Tasks have a duration, priority, deadline, effort level and subject. DayFlow places them in the free gaps between fixed plans, most urgent first, and can lock a task at a precise time.
-- **Focus-aware scheduling.** Low focus gives 25-minute sprints with light tasks first; high focus gives 90-minute deep-work blocks with the hardest tasks first. Hard tasks go to your best time of day.
-- **GPS-style rerouting.** Tick a block as done or mark it missed and the rest of the day is recalculated instantly. Every change can be undone.
-- **Week view.** A 7-day projection of how your tasks will fill the week, with a warning when a deadline is at risk.
-- **Subjects, steps and notes.** Colour-coded subjects, checklists inside each task, notes, and a focus timer that shows them.
-- **Evening review.** Time worked, tasks finished, streak, time per subject, what rolls over and what tomorrow looks like.
-- **Recurring fixed plans and calendar import.** Classes and sport repeat on chosen days; import a university timetable or a Google Calendar export (.ics).
-- **Push reminders.** A notification 5 minutes before each block, even when the app is closed (installed app on iPhone/iPad, iOS 16.4+), plus export to the Calendar app.
-- **Day to day.** Unfinished tasks roll over each morning, deadlines get closer automatically, overdue tasks are flagged, and the last 7 days are charted.
-- **Accounts and sync.** Email sign-in; the plan syncs across devices and works offline.
+- **A "now" card that follows the sky.** The home screen greets you by name and shows what to do right now, with one big button to start. Its gradient follows the time of day (morning, day, evening, night).
+- **Write it, DayFlow plans it.** Natural-language quick add: "Réviser stats 1h demain à 17h !! #Gestión pour vendredi" sets the duration, day, time, priority, subject and deadline.
+- **Energy-aware scheduling.** Tired gives 25-minute sprints with light tasks first; in shape gives 90-minute deep-work blocks with the hardest tasks first, placed at your best time of day.
+- **GPS-style rerouting with gestures.** Swipe a task right when it's done, left if you missed it: the rest of the day is recalculated instantly. Every change can be undone.
+- **Week view.** A 7-day projection of how your tasks fill the week, with warnings when a deadline is at risk.
+- **Focus timer, subjects, steps and notes.** Colour-coded subjects, checklists inside each task, a focus timer that shows them, and confetti when the day is done.
+- **Evening review and stats.** Time worked, tasks finished, streak, time per subject over 7 days.
+- **Recurring fixed plans and calendar import** (.ics from a university timetable or Google Calendar).
+- **Push reminders** 5 minutes before each block, even when the app is closed (installed app on iPhone/iPad, iOS 16.4+), plus export to the Calendar app.
+- **Accounts and sync** across devices, offline support, installable as an app, light and dark mode.
 
 ## Positioning
 
