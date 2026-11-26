@@ -22,12 +22,14 @@ Les outils comme Motion organisent le travail. DayFlow organise la vie étudiant
 - **L'ajout en une phrase.** « Réviser stats 1h demain à 17h !! #Gestión pour vendredi » donne la durée, le jour, l'heure, la priorité, la matière et l'échéance.
 - **Un planning selon l'énergie.** Fatigué : blocs de 25 min, tâches légères d'abord. Ça va : blocs de 50 min. En forme : blocs de 90 min, le plus dur d'abord, placé au meilleur moment de la journée.
 - **Un recalcul façon GPS, avec des gestes.** Une tâche glissée vers la droite est faite ; vers la gauche, elle est manquée et la suite de la journée se recalcule. Chaque action peut être annulée.
+- **Le rattrapage façon GPS.** Si des créneaux passent sans être cochés, DayFlow le signale et propose de tout replacer à partir de maintenant, ou de les cocher d'un coup. Une tâche finie en avance fait avancer la suite de la journée ; une tâche glissée à gauche avant son créneau part à demain.
+- **Les routines.** Une tâche peut revenir chaque jour, du lundi au vendredi ou certains jours (« Sport 45min tous les lundis et jeudis »). Ce qui n'est pas fait ne s'accumule pas.
 - **Une vue semaine** qui projette les tâches sur 7 jours et prévient quand une échéance risque d'être ratée.
 - **Mode focus, matières, étapes et notes.** Minuteur plein écran, matières en couleur, listes d'étapes à cocher, et des confettis quand la journée est bouclée.
 - **Bilan du soir et statistiques** : temps de travail, tâches finies, jours d'affilée, temps par matière sur 7 jours.
 - **Plans fixes récurrents et import d'emploi du temps** (fichier .ics de la fac ou de Google Agenda).
 - **Rappels 5 min avant chaque bloc**, même appli fermée (appli installée, iOS 16.4 ou plus), et export de la journée vers le Calendrier.
-- **Comptes et synchronisation** entre appareils, fonctionnement hors ligne, mode sombre.
+- **Comptes et synchronisation** entre appareils, fonctionnement hors ligne, mode sombre, raccourcis clavier sur iPad et ordinateur (N : nouvelle tâche, 1 à 4 : onglets).
 
 ## Démarche
 

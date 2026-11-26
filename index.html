@@ -105,6 +105,13 @@ h2.warn{color:var(--orange)}
 .swbg span{display:flex;align-items:center;gap:6px}
 .tc.swiping .swbg{opacity:1}
 .tc.l .swbg{background:var(--orange)}
+.tc.l:has(.tci[data-fut]) .swbg{background:var(--indigo)}
+.catch{border-radius:18px;padding:14px 16px;background:color-mix(in srgb,var(--orange) 13%,var(--card));margin-bottom:10px;box-shadow:var(--shadow)}
+.catch p{margin:0;font-size:15px;line-height:1.4;display:flex;gap:10px;align-items:flex-start}
+.catch p svg{color:var(--orange);margin-top:1px}
+.catch .cr{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.catch button{border:0;border-radius:999px;min-height:40px;padding:0 16px;font-size:15px;font-weight:700;background:var(--orange);color:#fff}
+.catch button.g{background:var(--fill);color:var(--label)}
 .swbg span:last-child{opacity:0}
 .tc.l .swbg span:first-child{opacity:0}
 .tc.l .swbg span:last-child{opacity:1}
@@ -384,7 +391,7 @@ textarea.full{resize:vertical;min-height:64px;line-height:1.4;font-size:16px}
         <p class="cap" id="cap"></p>
         <h2>Planning</h2>
         <div class="tl" id="tline"></div>
-        <p class="foot">Glisse une tâche vers la droite quand c'est fait, vers la gauche si tu l'as manquée. Touche-la pour plus d'actions.</p>
+        <p class="foot">Glisse une tâche vers la droite quand c'est fait, vers la gauche si tu l'as manquée (ou pour la reporter à demain si son créneau n'est pas encore arrivé). Touche-la pour plus d'actions.</p>
       </div>
       <div class="tside">
         <div class="sec" id="ofCard" hidden><h2 class="warn">Pas de place aujourd'hui</h2><div class="card" id="ofList"></div></div>
@@ -492,7 +499,8 @@ const sample=()=>{const w=new Date().getDay(),H={},HC={};
     {id:8,n:'Répondre au groupe WhatsApp',d:15,left:15,p:1,dl:99,e:'easy',cat:null,note:'',sub:[]},
     {id:9,n:'Courses',d:30,left:30,p:2,dl:1,e:'easy',cat:14,note:'',sub:[]},
     {id:10,n:'Lire le chapitre 4',d:45,left:45,p:1,dl:5,e:'easy',cat:11,note:'',sub:[]},
-    {id:16,n:'Préparer l\'oral d\'anglais',d:90,left:90,p:2,dl:5,e:'hard',cat:null,note:'',sub:[],from:dayOff(2)}],
+    {id:16,n:'Préparer l\'oral d\'anglais',d:90,left:90,p:2,dl:5,e:'hard',cat:null,note:'',sub:[],from:dayOff(2)},
+    {id:17,n:'Vocabulaire d\'anglais',d:15,left:15,p:2,dl:0,e:'easy',cat:null,note:'Une liste de 20 mots, à voix haute.',sub:[],rep:[0,1,2,3,4,5,6]}],
   done:[],hist:H,histCat:HC}};
 const blank=()=>({v:6,name:'',ts:0,day:ymd(new Date()),onb:true,view:'day',focus:2,peak:'am',rem:false,start:'08:00',end:'22:00',from:null,seq:1,cats:[],events:[],tasks:[],done:[],hist:{},histCat:{}});
 function norm(s){
@@ -500,7 +508,7 @@ function norm(s){
   s.hist=s.hist||{};s.histCat=s.histCat||{};s.cats=s.cats||[];s.peak=s.peak||'am';s.ts=s.ts||0;s.rem=!!s.rem;s.view=s.view==='week'?'week':'day';s.done=s.done||[];
   s.events=(s.events||[]).map(e=>({...e,days:Array.isArray(e.days)?e.days:(e.date?[]:[0,1,2,3,4,5,6]),cat:e.cat??null}));
   const tmr=dayOff(1);
-  s.tasks=(s.tasks||[]).map(t=>{const x={note:'',sub:[],cat:null,at:null,from:null,...t};if(x.tm)x.from=tmr;delete x.tm;return x});
+  s.tasks=(s.tasks||[]).map(t=>{const x={note:'',sub:[],cat:null,at:null,from:null,rep:null,...t};if(!Array.isArray(x.rep)||!x.rep.length)x.rep=null;if(x.tm)x.from=tmr;delete x.tm;return x});
   return s;
 }
 let st=null,fresh=false;
@@ -531,6 +539,9 @@ const fmtDate=k=>dateOf(k).toLocaleDateString('fr-FR',{weekday:'short',day:'nume
 const repLabel=e=>{const r=repOf(e.days);return r==='once'?(e.date===st.day?'Aujourd\'hui seulement':cap1(fmtDate(e.date))):r==='daily'?'Tous les jours':r==='wk'?'Du lundi au vendredi':cap1(DOW_ORDER.filter(d=>e.days.includes(d)).map(d=>DOW_S[d]).join(', '))};
 const eventsOn=key=>{const w=dateOf(key).getDay();return st.events.filter(e=>e.days.length?e.days.includes(w):e.date===key)};
 const eligible=(t,key)=>!t.from||t.from<=key;
+// recurring tasks: next day (offset from today, inclusive) whose weekday is in days
+const nextOcc=(days,k0=0)=>{for(let k=k0;k<k0+7;k++){const key=dayOff(k);if(days.includes(dateOf(key).getDay()))return{k,key}}return{k:k0,key:dayOff(k0)}};
+const repTxt=days=>{const r=repOf(days);return r==='daily'?'Chaque jour':r==='wk'?'Du lundi au vendredi':'Chaque '+DOW_ORDER.filter(d=>days.includes(d)).map(d=>DOW_S[d]).join(', ')};
 const ic={check:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',chev:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',plus:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',cal:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',user:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.3-3.6 4.2-5.2 7.5-5.2s6.2 1.6 7.5 5.2"/></svg>',re:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg>',star:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9M10 19V5M16 19v-7M21 19H3"/></svg>',list:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></svg>',gauge:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4-5"/></svg>',route:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 17c6 0 2-10 8-10"/></svg>'};
 
 // New calendar day: archive today's work, carry unfinished tasks over, deadlines get closer, past one-off plans go.
@@ -538,7 +549,7 @@ function rollover(){
   const today=ymd(new Date());if(st.day===today)return false;
   if(st.day&&st.done.length){st.hist[st.day]=st.done.reduce((s,d)=>s+d.b-d.a,0);const c={};st.done.forEach(d=>{const k=d.cat??'';c[k]=(c[k]||0)+d.b-d.a});st.histCat[st.day]=c}
   const days=st.day?Math.min(14,Math.max(1,Math.round((dateOf(today)-dateOf(st.day))/864e5))):1;
-  st.tasks=st.tasks.filter(t=>t.left>0).map(t=>{let dl=t.dl,late=!!t.late;for(let i=0;i<days;i++){if(dl==0)late=true;else if(dl<99)dl=dl<=1?0:dl-1}const at=t.from&&t.from<today?null:t.at;return{...t,dl,late,at}});
+  st.tasks=st.tasks.filter(t=>t.left>0||t.rep).map(t=>{if(t.rep){const o=nextOcc(t.rep);return{...t,left:t.d,late:false,dl:o.k,from:o.key,sub:t.sub.map(x=>({...x,ok:false}))}}let dl=t.dl,late=!!t.late;for(let i=0;i<days;i++){if(dl==0)late=true;else if(dl<99)dl=dl<=1?0:dl-1}const at=t.from&&t.from<today?null:t.at;return{...t,dl,late,at}});
   st.events=st.events.filter(e=>e.days.length||!e.date||e.date>=today);
   st.done=[];st.from=null;st.day=today;
   for(const o of [st.hist,st.histCat]){const ks=Object.keys(o).sort();ks.slice(0,Math.max(0,ks.length-14)).forEach(k=>delete o[k])}
@@ -546,9 +557,9 @@ function rollover(){
 }
 
 // Core planner for one day. pool = [{t, r}] (remaining minutes), shared across days for the week projection.
-function schedule(key,k,evs,pool,F,S,E){
+function schedule(key,k,evs,pool,F,S,E,extra=[]){
   const f=st.focus,{c:chunk,b:brk}=CH[f];
-  const busy=evs.map(x=>[toM(x.s),toM(x.e)]).filter(x=>x[1]>x[0]),blocks=[],pinned=new Set();
+  const busy=[...evs.map(x=>[toM(x.s),toM(x.e)]),...extra].filter(x=>x[1]>x[0]),blocks=[],pinned=new Set();
   for(const x of pool){const t=x.t;if(x.r>0&&t.at&&t.from===key){const a=toM(t.at);if(a>=F&&a<E){const b=Math.min(E,a+x.r);blocks.push({k:'task',a,b,t,pin:true,part:b-a<x.r,tot:x.r});busy.push([a,b]);x.r-=b-a;pinned.add(x)}}}
   busy.sort((p,q)=>p[0]-q[0]);
   const gaps=[];let cur=F;
@@ -556,7 +567,7 @@ function schedule(key,k,evs,pool,F,S,E){
   if(cur<E)gaps.push([cur,E]);
   const base=t=>{const dl=t.dl>=99?99:t.dl-k,late=t.late||dl<0;return t.p*10+(late?40:dl==0?30:dl==1?15:dl<=5?5:0)+(t.e==='hard'?(f==3?8:f==1?-8:0):(f==1?6:0))};
   const fit=(x,m,c)=>base(x.t)+(x.t.e==='hard'?(inPeak(m)?12:-6):(inPeak(m)?-3:3))+(x===c?6:0);
-  const ok=x=>x.r>0&&!pinned.has(x)&&eligible(x.t,key);
+  const ok=x=>x.r>0&&!pinned.has(x)&&eligible(x.t,key)&&!(x.t.rep&&(x.t.from||st.day)!==key);
   for(const[g0,g1]of gaps){
     let p=g0,c=null;
     while(g1-p>=15){
@@ -579,19 +590,22 @@ const byTime=(x,y)=>x.a-y.a||(RANK[x.k]??2)-(RANK[y.k]??2);
 const bounds=()=>{const S=toM(st.start),E=toM(st.end);return{S,E,F:st.from==null?S:Math.min(E,Math.max(S,st.from))}};
 function plan(){
   const key=st.day,{S,E,F}=bounds(),evs=eventsOn(key),pool=st.tasks.filter(t=>t.left>0).map(t=>({t,r:t.left}));
-  const blocks=schedule(key,0,evs,pool,F,S,E);
+  const blocks=schedule(key,0,evs,pool,F,S,E,st.done.map(d=>[d.a,d.b]));
   const items=[...pastItems(),...fixedItems(evs),...blocks].sort(byTime);
   return{items,left:pool.filter(x=>x.r>0&&eligible(x.t,key)),F,S,E,blocks};
 }
 function week(){
   const{S,E,F:F0}=bounds(),pool=st.tasks.filter(t=>t.left>0).map(t=>({t,r:t.left})),days=[],warned=new Set();
   for(let k=0;k<7;k++){
-    const key=dayOff(k),evs=eventsOn(key),blocks=schedule(key,k,evs,pool,k?S:F0,S,E),fixed=fixedItems(evs),past=k?[]:pastItems();
+    const key=dayOff(k),w=dateOf(key).getDay();
+    // future occurrences of recurring tasks join the projection on their own day
+    if(k)for(const t of st.tasks)if(t.rep&&t.rep.includes(w)&&key>(t.from||st.day))pool.push({t:{...t,from:key,dl:k,late:false,at:t.at,v:1},r:t.d});
+    const evs=eventsOn(key),blocks=schedule(key,k,evs,pool,k?S:F0,S,E,k?[]:st.done.map(d=>[d.a,d.b])),fixed=fixedItems(evs),past=k?[]:pastItems();
     const tasks=blocks.filter(b=>b.k==='task'),sum=a=>a.reduce((s,b)=>s+b.b-b.a,0);
-    const late=[];for(const x of pool){const t=x.t;if(x.r>0&&eligible(t,key)&&t.dl<99&&!t.late&&t.dl-k===0&&!warned.has(t.id)){warned.add(t.id);late.push({t,r:x.r})}}
+    const late=[];for(const x of pool){const t=x.t;if(x.r>0&&!t.v&&eligible(t,key)&&t.dl<99&&!t.late&&t.dl-k===0&&!warned.has(t.id)){warned.add(t.id);late.push({t,r:x.r})}}
     days.push({key,k,items:[...past,...fixed,...tasks].sort(byTime),work:sum(tasks)+sum(past),fixM:sum(fixed),free:sum(blocks.filter(b=>b.k==='free')),late});
   }
-  return{days,beyond:pool.filter(x=>x.r>0)};
+  return{days,beyond:pool.filter(x=>x.r>0&&!x.t.v)};
 }
 
 
@@ -638,7 +652,7 @@ function itemHtml(it,k){
   if(it.k==='fixed')return`<div class="trow">${t0}<div class="fx" style="--c:${colOf(it.cat)||'var(--indigo)'}"><b>${esc(it.n)}</b><span>${dur(it.b-it.a)}</span></div></div>`;
   if(it.k==='brk')return`<div class="trow sm"><div class="tcol"><span>${toT(it.a)}</span></div><div class="bk">Pause · ${dur(it.b-it.a)}</div></div>`;
   if(it.k==='free')return`<div class="trow sm"><div class="tcol"><span>${toT(it.a)}</span></div><div class="bk free">Temps libre · ${dur(it.b-it.a)}</div></div>`;
-  const t=it.t,dt=dueTxt(t),ns=t.sub.length,nok=t.sub.filter(s=>s.ok).length,cat=catOf(t.cat);
+  const t=it.t,dt=t.rep?'':dueTxt(t),ns=t.sub.length,nok=t.sub.filter(s=>s.ok).length,cat=catOf(t.cat);
   const meta=[];
   if(cat)meta.push(`<span class="mc c">${esc(cat.n)}</span>`);
   meta.push(`<span class="mc">${dur(it.b-it.a)}${it.part?' sur '+dur(it.tot):''}</span>`);
@@ -646,7 +660,9 @@ function itemHtml(it,k){
   if(dt)meta.push(`<span class="mc${t.late||t.dl==0?' red':''}">${dt}</span>`);
   if(t.e==='hard')meta.push('<span class="mc">Profond</span>');
   if(ns)meta.push(`<span class="mc">${nok}/${ns} étapes</span>`);
-  return`<div class="trow">${t0}<div class="tc" style="--c:${cvar(t.cat)}"><div class="swbg" aria-hidden="true"><span>${ic.check} Fait</span><span>Manqué ${ic.re}</span></div><div class="tci" data-id="${t.id}" data-a="${it.a}" data-b="${it.b}" data-day="${k}" role="button" tabindex="0" aria-label="${esc(t.n)}, de ${toT(it.a)} à ${toT(it.b)}"><div class="tcx"><p class="ttl">${priH(t.p)}${esc(t.n)}</p><div class="meta">${meta.join('')}</div></div>${k===0?`<button class="ck" data-done="${t.id}" data-a="${it.a}" data-b="${it.b}" aria-label="Marquer ${esc(t.n)} comme fait"><i></i></button>`:''}</div></div></div>`;
+  if(t.rep)meta.push(`<span class="mc">${ic.re}${repTxt(t.rep)}</span>`);
+  const fut=k===0&&it.a>nowM();
+  return`<div class="trow">${t0}<div class="tc" style="--c:${cvar(t.cat)}"><div class="swbg" aria-hidden="true"><span>${ic.check} Fait</span><span>${fut?'Demain '+ic.moon.replace('width="20" height="20"','width="13" height="13"'):'Manqué '+ic.re}</span></div><div class="tci" data-id="${t.id}" data-a="${it.a}" data-b="${it.b}" data-day="${k}"${fut?' data-fut="1"':''} role="button" tabindex="0" aria-label="${esc(t.n)}, de ${toT(it.a)} à ${toT(it.b)}"><div class="tcx"><p class="ttl">${priH(t.p)}${esc(t.n)}</p><div class="meta">${meta.join('')}</div></div>${k===0?`<button class="ck" data-done="${t.id}" data-a="${it.a}" data-b="${it.b}" aria-label="Marquer ${esc(t.n)} comme fait"><i></i></button>`:''}</div></div></div>`;
 }
 const nowRow=n=>`<div class="nowl" aria-label="Maintenant"><b>${toT(n)}</b><i></i></div>`;
 
@@ -669,6 +685,9 @@ function renderToday(P,W){
   $('cap').textContent=CAP[st.focus];
   // timeline
   const past=items.filter(i=>i.k==='past');let html='';
+  const over=P.blocks.filter(b=>b.k==='task'&&b.b<=n);
+  if(over.length&&n<E){const names=[...new Set(over.map(b=>b.t.n))];
+    html+=`<div class="catch" role="status"><p>${ic.warn.replace('width="20" height="20"','width="18" height="18"')}<span><b>${over.length} créneau${over.length>1?'x':''} passé${over.length>1?'s':''} sans être coché${over.length>1?'s':''}</b> · ${esc(names.slice(0,2).join(', '))}${names.length>2?'…':'.'} Je replace la suite à partir de maintenant ?</span></p><div class="cr"><button data-catch="re">Recalculer depuis ${toT(n)}</button><button class="g" data-catch="ok">C'était fait</button></div></div>`}
   if(past.length)html+=`<button class="donebar" data-tdone="1" aria-expanded="${ui.showDone}">${ic.done}Terminé · ${past.length}<span class="chev${ui.showDone?' up':''}">${ic.chev2}</span></button>`+(ui.showDone?`<div class="donelist">${past.map(i=>`<div class="dl"><span>${toT(i.a)}</span><span>${cd(i.cat)}${esc(i.n)}</span><span>${dur(i.b-i.a)}</span></div>`).join('')}</div>`:'');
   let nowDone=!(n>=S&&n<=E),rr=st.from==null,any=false;
   for(const it of items){if(it.k==='past')continue;any=true;
@@ -704,8 +723,9 @@ function renderWeek(W){
 }
 
 function taskRow(t,done){
-  const parts=[dur(done?t.d:t.left)],dt=dueTxt(t),ns=t.sub.length;
+  const parts=[dur(done?t.d:t.left)],dt=t.rep?'':dueTxt(t),ns=t.sub.length;
   if(!done){if(t.at&&t.from)parts.push((t.from===st.day?'':cap1(fmtDate(t.from))+' ')+'à '+t.at);if(dt)parts.push(t.late||t.dl==0?`<span class="late">${dt}</span>`:dt);if(ns)parts.push(`${t.sub.filter(s=>s.ok).length}/${ns} étapes`)}
+  if(t.rep)parts.push(repTxt(t.rep));
   return`<div class="li${done?' done':''}" style="--c:${cvar(t.cat)}"><button class="ck sm${done?' on':''}" data-fin="${t.id}" aria-label="${done?'Rouvrir':'Terminer'} ${esc(t.n)}"><i></i></button><button class="nm" data-edit="${t.id}"><span class="tt">${priH(t.p)}${esc(t.n)}</span><span class="st">${parts.join(' · ')}</span></button><span class="chev">${ic.chev2}</span></div>`;
 }
 function renderTasks(){
@@ -721,7 +741,7 @@ function renderTasks(){
   }else if(ui.seg==='later'){
     const later=st.tasks.filter(t=>!eligible(t,st.day)).sort((a,b)=>a.from<b.from?-1:1),by={};
     later.forEach(t=>{(by[t.from]=by[t.from]||[]).push(t)});
-    for(const k in by)h+=`<div class="gh">${cap1(dateOf(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}))}<span>${dur(by[k].reduce((s,t)=>s+t.left,0))}</span></div><div class="card">${by[k].map(t=>`<div class="li"><button class="nm" data-edit="${t.id}"><span class="tt">${cd(t.cat)}${priH(t.p)}${esc(t.n)}</span><span class="st">${dur(t.left)}${t.at?' · à '+esc(t.at):''}</span></button><button class="pill" data-back="${t.id}">Aujourd'hui</button></div>`).join('')}</div>`;
+    for(const k in by)h+=`<div class="gh">${cap1(dateOf(k).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}))}<span>${dur(by[k].reduce((s,t)=>s+t.left,0))}</span></div><div class="card">${by[k].map(t=>`<div class="li"><button class="nm" data-edit="${t.id}"><span class="tt">${cd(t.cat)}${priH(t.p)}${esc(t.n)}</span><span class="st">${dur(t.left)}${t.at?' · à '+esc(t.at):''}${t.rep?' · '+repTxt(t.rep):''}</span></button><button class="pill" data-back="${t.id}">Aujourd'hui</button></div>`).join('')}</div>`;
     if(!later.length)h='<div class="card empty" style="margin-top:14px">Rien de prévu pour plus tard. Écris « demain » ou « lundi » dans le champ d\'ajout pour planifier à l\'avance.</div>';
   }else if(ui.seg==='fixed'){
     h=`<div class="card" style="margin-top:14px">${st.events.slice().sort((a,b)=>toM(a.s)-toM(b.s)).map(e=>`<div class="li"><button class="nm" data-eedit="${e.id}"><span class="tt">${cd(e.cat)}${esc(e.n)}</span><span class="st">${esc(repLabel(e))}</span></button><span class="val">${esc(e.s)}–${esc(e.e)}</span><span class="chev">${ic.chev2}</span></div>`).join('')}<button class="addrow" data-new="event">${ic.plus}Nouveau plan fixe</button><button class="addrow" id="icsBtn">${ic.cal}Importer un emploi du temps (.ics)</button></div><p class="hint">Cours, sport, repas : DayFlow place tes tâches autour. L'import accepte les fichiers .ics de ta fac ou de Google Agenda.</p>`;
@@ -774,7 +794,7 @@ function openTask(id,preset){
   begin('task');const t=st.tasks.find(x=>x.id==id),tmr=dayOff(1);
   draft=t?{...t,sub:t.sub.map(s=>({...s})),isNew:false}:{n:'',note:'',d:45,p:2,dl:5,e:'easy',cat:null,sub:[],from:null,at:null,isNew:true};
   draft.when=!draft.from||draft.from<=st.day?'today':draft.from===tmr?'tomorrow':'date';draft.date=draft.when==='date'?draft.from:dayOff(2);
-  draft.pin=!!draft.at;if(preset)Object.assign(draft,preset);drawTask();show();
+  draft.pin=!!draft.at;draft.trep=draft.rep?repOf(draft.rep):'none';draft.rdays=draft.rep?[...draft.rep]:[];if(preset)Object.assign(draft,preset);drawTask();show();
   setTimeout(()=>{const f=$('fN');if(f&&draft&&draft.isNew)f.focus()},50);
 }
 function drawTask(){
@@ -784,15 +804,17 @@ function drawTask(){
   <div class="card">${chipsH(d.cat,true)}${d.newCat?`<input class="full" id="fCat" placeholder="Nom de la nouvelle matière" maxlength="24" value="${esc(d.ncName||'')}" style="border-top:1px solid var(--sep)">${colorsH(d.ncol)}<button type="button" class="cbtn blue sm" data-ncs="1">Créer la matière</button>`:''}</div>
   <div class="card"><div class="fr"><span>Durée</span><div class="step"><button type="button" data-st="-15" aria-label="Plus court">−</button><output id="fD">${dur(d.d)}</output><button type="button" data-st="15" aria-label="Plus long">+</button></div></div>
   <div class="fr sg"><span>Priorité</span>${segH('p',[[1,'Basse'],[2,'Moyenne'],[3,'Haute']],d.p)}</div>
-  <div class="fr sg"><span>Échéance</span>${segH('dl',[[0,'Aujourd\'hui'],[1,'Demain'],[5,'Semaine'],[99,'Aucune']],d.dl)}</div>
+  ${d.trep==='none'?`<div class="fr sg"><span>Échéance</span>${segH('dl',[[0,'Aujourd\'hui'],[1,'Demain'],[5,'Semaine'],[99,'Aucune']],d.dl)}</div>`:''}
   <div class="fr sg"><span>Effort</span>${segH('e',[['easy','Léger'],['hard','Profond']],d.e)}</div></div>
-  <div class="card"><div class="fr sg"><span>Quand</span>${segH('when',[['today','Aujourd\'hui'],['tomorrow','Demain'],['date','Autre jour']],d.when)}</div>
-  ${d.when==='date'?`<label class="fr"><span>Date</span><input class="ti" id="fDate" type="date" min="${st.day}" value="${esc(d.date)}"></label>`:''}
+  <div class="card"><div class="fr sg"><span>Répéter</span>${segH('trep',[['none','Jamais'],['daily','Chaque jour'],['wk','Lun–ven'],['custom','Jours…']],d.trep)}</div>
+  ${d.trep==='custom'?`<div class="fr wide"><div class="days">${DOW_ORDER.map(w=>`<button type="button" data-tdy="${w}" aria-pressed="${d.rdays.includes(w)}" aria-label="${DOW_S[w]}">${DOW_1[w]}</button>`).join('')}</div></div>`:''}
+  ${d.trep==='none'?`<div class="fr sg"><span>Quand</span>${segH('when',[['today','Aujourd\'hui'],['tomorrow','Demain'],['date','Autre jour']],d.when)}</div>`:''}
+  ${d.trep==='none'&&d.when==='date'?`<label class="fr"><span>Date</span><input class="ti" id="fDate" type="date" min="${st.day}" value="${esc(d.date)}"></label>`:''}
   <label class="fr"><span>À une heure précise</span><input type="checkbox" class="sw" id="fPin" ${d.pin?'checked':''}></label>
   ${d.pin?`<label class="fr"><span>Heure</span><input class="ti" id="fAt" type="time" value="${esc(d.at||'17:00')}"></label>`:''}</div>
   <div class="card"><div class="lh">Étapes</div>${d.sub.map(s=>`<div class="sbi"><button type="button" class="chk" data-sbt="${s.id}" aria-label="${s.ok?'Décocher':'Cocher'} ${esc(s.n)}"><span class="ring${s.ok?' on':''}">${s.ok?ic.check:''}</span></button><span class="${s.ok?'okd':''}">${esc(s.n)}</span><button type="button" class="x" data-sbx="${s.id}" aria-label="Supprimer l'étape">×</button></div>`).join('')}
   <div class="sbi"><span style="flex:1"><input class="full" id="fSub" placeholder="Ajouter une étape" maxlength="60" style="padding-left:0;min-height:44px"></span><button type="button" class="tb" data-sba="1">Ajouter</button></div></div>
-  <p class="hint" id="fH">${d.pin?'La tâche sera bloquée à cette heure-là, les autres s\'organisent autour.':'Les tâches profondes vont dans tes blocs les plus longs, à ton meilleur moment.'}</p>
+  <p class="hint" id="fH">${d.trep!=='none'?'Une routine : elle revient chaque jour choisi, à faire dans la journée. Ce qui n\'est pas fait ne s\'accumule pas.':d.pin?'La tâche sera bloquée à cette heure-là, les autres s\'organisent autour.':'Les tâches profondes vont dans tes blocs les plus longs, à ton meilleur moment.'}</p>
   ${d.isNew?'':'<div class="card"><button class="del" data-sh="del">Supprimer la tâche</button></div>'}`;
 }
 function keepTask(){
@@ -866,8 +888,12 @@ function saveSheet(){
   if(mode==='task'){
     keepTask();const d=draft,tmr=dayOff(1);
     if(d.when==='date'&&(!d.date||d.date<st.day)){hint('Choisis une date à partir d\'aujourd\'hui.','err');return}
-    let from=d.when==='today'?st.day:d.when==='tomorrow'?tmr:d.date;const at=d.pin?(d.at||'17:00'):null;if(from===st.day&&!at)from=null;
-    const v={n,note:(d.note||'').trim(),p:d.p,e:d.e,cat:d.cat,sub:d.sub,from,at};
+    const rep=d.trep==='none'?null:d.trep==='daily'?[0,1,2,3,4,5,6]:d.trep==='wk'?[1,2,3,4,5]:uniq(d.rdays).map(Number);
+    if(rep&&!rep.length){hint('Choisis au moins un jour.','err');return}
+    let from=d.when==='today'?st.day:d.when==='tomorrow'?tmr:d.date;const at=d.pin?(d.at||'17:00'):null;
+    if(rep){const o=nextOcc(rep);from=o.key;d.dl=o.k}
+    if(from===st.day&&!at)from=null;
+    const v={n,note:(d.note||'').trim(),p:d.p,e:d.e,cat:d.cat,sub:d.sub,from,at,rep};
     act(d.isNew?'Tâche ajoutée':'Tâche modifiée',()=>{const t=st.tasks.find(x=>x.id==d.id);
       if(t){const used=t.d-t.left;Object.assign(t,v,{d:d.d,left:Math.max(0,d.d-used)});if(t.dl!==d.dl){t.dl=d.dl;t.late=false}}
       else st.tasks.push({id:++st.seq,...v,d:d.d,left:d.d,dl:d.dl})});
@@ -898,7 +924,7 @@ function openBlock(id,a,b,k){
   const t=st.tasks.find(x=>x.id==id);if(!t)return;
   begin('block');draft={id:t.id,a,b,k};
   $('sheet').innerHTML=head('Fermer','','')+`<div class="bh" style="--c:${cvar(t.cat)}"><span class="bhs"></span><div><p class="bt" id="shT">${priH(t.p)}${esc(t.n)}</p><p class="tsub" style="text-align:left;margin-top:4px">${k?cap1(fmtDate(dayOff(k)))+' · ':''}${toT(a)}–${toT(b)} · ${dur(b-a)}${catOf(t.cat)?' · '+esc(catOf(t.cat).n):''}</p></div></div>${t.note?`<p class="tnote" style="text-align:left;margin:12px 2px 0">${esc(t.note)}</p>`:''}
-  <div class="acts">${k===0?`<button class="act blue" data-ba="focus">${ic.play}<span>Démarrer le focus</span></button><button class="act" data-ba="done">${ic.done}<span>C'est fait</span></button><button class="act" data-ba="miss">${ic.re}<span>Je l'ai manqué, recalculer</span></button><button class="act" data-ba="tmr">${ic.moon}<span>Reporter à demain</span></button>`:''}<button class="act" data-ba="edit">${ic.edit}<span>Modifier la tâche</span></button></div>`;
+  <div class="acts">${k===0?`<button class="act blue" data-ba="focus">${ic.play}<span>Démarrer le focus</span></button><button class="act" data-ba="done">${ic.done}<span>C'est fait</span></button>${a<=nowM()?`<button class="act" data-ba="miss">${ic.re}<span>Je l'ai manqué, recalculer</span></button>`:''}<button class="act" data-ba="tmr">${ic.moon}<span>Reporter à demain</span></button>`:''}<button class="act" data-ba="edit">${ic.edit}<span>Modifier la tâche</span></button></div>`;
   show();
 }
 
@@ -919,11 +945,14 @@ function dayWord(w){
 }
 function parseQuick(raw){
   let s=' '+String(raw||'').replace(/’/g,"'")+' ';
-  const o={d:null,p:null,e:null,cat:null,newCat:null,fromK:null,at:null,dlK:null};
+  const o={d:null,p:null,e:null,cat:null,newCat:null,fromK:null,at:null,dlK:null,rep:null};
   const take=(re,fn)=>{const m=re.exec(s);if(m){fn(m);s=s.slice(0,m.index)+' '+s.slice(m.index+m[0].length)}};
   take(/\s(!{1,3})(?=\s)/,m=>o.p=m[1].length);
   take(/\s#([\p{L}\p{N}_-]+)/u,m=>{const q=fold(m[1]);const c=st.cats.find(c=>fold(c.n).replace(/\s+/g,'').startsWith(q));if(c)o.cat=c.id;else o.newCat=m[1]});
   take(/\s(urgente?)(?=\s)/i,()=>{o.p=3;o.dlK=0});
+  take(/\s(?:tous les jours|chaque jour|quotidiennement|tous les soirs|tous les matins|chaque soir|chaque matin)(?=\s)/i,()=>{o.rep=[0,1,2,3,4,5,6]});
+  take(/\s(?:en semaine|du lundi au vendredi|tous les jours de la semaine)(?=\s)/i,()=>{o.rep=[1,2,3,4,5]});
+  take(/\s(?:tous les|chaque)\s(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)s?(?:\s(?:et|,)\s?(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)s?)?(?=\s)/i,m=>{o.rep=uniq([m[1],m[2]].filter(Boolean).map(x=>WDN.indexOf(fold(x)))).map(Number)});
   take(new RegExp('\\s(?:pour|avant)\\s'+DAYRE+'(?=\\s)','i'),m=>{const k=dayWord(m[1]);if(k!=null)o.dlK=k});
   take(/\s(?:à|a|vers)\s?(\d{1,2})\s?(?:h|:)\s?(\d{2})?(?=\s)/i,m=>{const h=+m[1],mi=+(m[2]||0);if(h<24&&mi<60)o.at=pad(h)+':'+pad(mi)});
   take(/\s(\d{1,2})\s?h\s?(\d{2})?(?:\s?min)?(?=\s)/i,m=>{o.d=(+m[1])*60+(+(m[2]||0))});
@@ -936,6 +965,7 @@ function parseQuick(raw){
   o.d=Math.min(480,Math.max(5,o.d??45));o.p=o.p??2;o.e=o.e??(o.d>=60?'hard':'easy');
   if(o.dlK!=null&&o.fromK!=null&&o.fromK>o.dlK)o.fromK=o.dlK;
   o.dl=o.dlK!=null?o.dlK:Math.max(5,o.fromK||0);
+  if(o.rep){const x=nextOcc(o.rep,o.fromK||0);o.fromK=x.k;o.dl=x.k;o.dlK=null}
   return o;
 }
 function quickChips(o){
@@ -946,37 +976,45 @@ function quickChips(o){
   c.push(['','Priorité basse','Priorité moyenne','Priorité haute'][o.p]);
   const cat=catOf(o.cat);if(cat)c.push(`<span class="cd" style="background:${COL[cat.c]||COL.blue}"></span>${esc(cat.n)}`);else if(o.newCat)c.push(`Nouvelle matière : ${esc(o.newCat)}`);
   c.push(o.e==='hard'?'Effort profond':'Effort léger');
+  if(o.rep)c.push(ic.re+repTxt(o.rep));
   return(o.n?`<span class="qc" style="background:var(--fill);color:var(--label)">${esc(o.n)}</span>`:'')+c.map(x=>`<span class="qc">${x}</span>`).join('');
 }
 function updChips(inId,chId){const v=$(inId)?$(inId).value:'';if($(chId))$(chId).innerHTML=v.trim()?quickChips(parseQuick(v)):''}
 function addQuick(raw){
   const o=parseQuick(raw);if(!o.n)return false;
   const when=o.fromK>0?(o.fromK===1?'demain':fmtDate(dayOff(o.fromK))):'aujourd\'hui';
-  act(`Ajoutée pour ${when}${o.at?' à '+o.at:''}`,()=>{
+  act(o.rep?`Routine ajoutée · ${repTxt(o.rep).toLowerCase()}`:`Ajoutée pour ${when}${o.at?' à '+o.at:''}`,()=>{
     let cat=o.cat;
     if(o.newCat){const used=new Set(st.cats.map(c=>c.c));cat=++st.seq;st.cats.push({id:cat,n:cap1(o.newCat).slice(0,24),c:Object.keys(COL).find(k=>!used.has(k))||'teal'})}
     const from=o.fromK>0?dayOff(o.fromK):(o.at?st.day:null);
-    st.tasks.push({id:++st.seq,n:o.n,note:'',d:o.d,left:o.d,p:o.p,dl:o.dl,e:o.e,cat,sub:[],from,at:o.at});
+    st.tasks.push({id:++st.seq,n:o.n,note:'',d:o.d,left:o.d,p:o.p,dl:o.dl,e:o.e,cat,sub:[],from,at:o.at,rep:o.rep});
   });
   return true;
 }
-const EX=['Réviser stats 1h demain !! #Gestión','Appel avec le groupe 30min à 17h','Exposé d\'anglais 2h pour vendredi !!!','Courses 20min'];
+const EX=['Réviser stats 1h demain !! #Gestión','Appel avec le groupe 30min à 17h','Exposé d\'anglais 2h pour vendredi !!!','Sport 45min tous les lundis et jeudis'];
 function openQuick(){
   begin('quick');
   $('sheet').innerHTML=head('Annuler','Nouvelle tâche','')+`<div class="card"><input id="qsIn" class="full" placeholder="Que dois-tu faire ?" maxlength="120" autocomplete="off" enterkeyhint="done" style="font-size:19px;min-height:58px"></div><div class="qchips" id="qsChips"></div><p class="hint" id="fH"></p>
   <div class="cbtns col"><button class="cbtn blue wide" data-q="add">Ajouter</button><button class="cbtn plain wide" data-q="more">Plus d'options</button></div>
   <p class="lh" style="padding:14px 4px 0">Essaie par exemple</p><div class="ex">${EX.map(x=>`<button class="exb" data-ex="${esc(x)}">${esc(x)}</button>`).join('')}</div>
-  <p class="hint" style="margin:14px 4px 0">Tu peux écrire une durée (45min, 1h30), un jour (demain, lundi, le 3), une heure (à 17h), une priorité (! à !!!), une matière (#Marketing) ou une échéance (pour vendredi).</p>`;
+  <p class="hint" style="margin:14px 4px 0">Tu peux écrire une durée (45min, 1h30), un jour (demain, lundi, le 3), une heure (à 17h), une priorité (! à !!!), une matière (#Marketing), une échéance (pour vendredi) ou une routine (tous les jours, chaque lundi).</p>`;
   show();setTimeout(()=>{const f=$('qsIn');if(f)f.focus()},60);
 }
-const toPreset=o=>({n:o.n,d:o.d,p:o.p,dl:o.dl,e:o.e,cat:o.cat,when:!o.fromK?'today':o.fromK===1?'tomorrow':'date',date:o.fromK>1?dayOff(o.fromK):dayOff(2),pin:!!o.at,at:o.at,newCat:!!o.newCat,ncName:o.newCat||'',ncol:'teal'});
+const toPreset=o=>({trep:o.rep?repOf(o.rep):'none',rdays:o.rep?[...o.rep]:[],n:o.n,d:o.d,p:o.p,dl:o.dl,e:o.e,cat:o.cat,when:!o.fromK?'today':o.fromK===1?'tomorrow':'date',date:o.fromK>1?dayOff(o.fromK):dayOff(2),pin:!!o.at,at:o.at,newCat:!!o.newCat,ncName:o.newCat||'',ncol:'teal'});
 
+// Done early (block still ahead, or finished mid-block): the rest of the day moves up to now.
+// Done on time or late: everything after the block keeps its place.
 function markDone(id,a,b){
-  const t=st.tasks.find(x=>x.id==id);if(!t)return;const had=st.tasks.some(isOpen);
-  act(`« ${t.n} » faite`,()=>{t.left=Math.max(0,t.left-(b-a));st.done.push({a,b,n:t.n,id:t.id,cat:t.cat});st.from=b});
+  const t=st.tasks.find(x=>x.id==id);if(!t)return;const had=st.tasks.some(isOpen),n=nowM(),len=b-a,m=Math.min(t.left,len);
+  let ra=a,rb=b,nf=b;
+  if(n<a){rb=Math.max(n,len);ra=rb-len;nf=n}
+  else if(n<b&&n-a>=10){rb=n;nf=n}
+  act(`« ${t.n} » faite`+(nf<b&&n>=toM(st.start)?' · la suite avance':''),()=>{t.left=Math.max(0,t.left-len);st.done.push({a:ra,b:rb,m,n:t.n,id:t.id,cat:t.cat});st.from=Math.max(st.from??0,nf)});
   try{navigator.vibrate&&navigator.vibrate(12)}catch(e){}
   if(had&&!st.tasks.some(isOpen))setTimeout(confetti,150);
 }
+function missBlock(a,b){const f=Math.max(b,nowM());act(`Manquée. Recalculé à partir de ${toT(Math.min(toM(st.end),f))}`,()=>{st.from=f})}
+function postpone(id){act('Reportée à demain',()=>{const t=st.tasks.find(x=>x.id==id);if(t){t.from=t.rep?nextOcc(t.rep,1).key:dayOff(1);if(t.rep)t.dl=nextOcc(t.rep,1).k;t.at=t.rep?t.at:null}})}
 function finishTask(id){
   const t=st.tasks.find(x=>x.id==id);if(!t)return;
   if(t.left>0){const had=st.tasks.some(isOpen),m=t.left,S=toM(st.start),E=toM(st.end),end=Math.min(E,Math.max(S+m,nowM()));
@@ -1187,7 +1225,7 @@ function endSwipe(){
   swallow=true;setTimeout(()=>{swallow=false},60);s.el.style.transition='';
   const id=+s.el.dataset.id,a=+s.el.dataset.a,b=+s.el.dataset.b;
   if(s.dx>90){s.el.style.transform='translateX(110%)';setTimeout(()=>markDone(id,a,b),200)}
-  else if(s.dx<-90){s.el.style.transform='translateX(-110%)';setTimeout(()=>act(`Manquée. Recalculé à partir de ${toT(b)}`,()=>{st.from=b}),200)}
+  else if(s.dx<-90){s.el.style.transform='translateX(-110%)';setTimeout(()=>s.el.dataset.fut?postpone(id):missBlock(a,b),200)}
   else{s.el.style.transform='';setTimeout(()=>s.el.parentElement.classList.remove('swiping','l'),220)}
 }
 document.addEventListener('pointerup',endSwipe);
@@ -1208,13 +1246,14 @@ document.addEventListener('click',e=>{
   if(d.tsub){const t=timer&&st.tasks.find(x=>x.id==timer.id),s=t&&t.sub.find(x=>x.id==d.tsub);if(s){s.ok=!s.ok;touch();save();b.innerHTML=`<span class="ring${s.ok?' on':''}">${s.ok?ic.check:''}</span>`;b.nextElementSibling.className=s.ok?'okd':''}return}
   if(d.ba){const{id,a,b:bb}=draft;closeSheet();
     if(d.ba==='focus')openTimer(id,a,bb);else if(d.ba==='done')markDone(id,a,bb);
-    else if(d.ba==='miss')act(`Manquée. Recalculé à partir de ${toT(bb)}`,()=>{st.from=bb});
-    else if(d.ba==='tmr')act('Reportée à demain',()=>{const t=st.tasks.find(x=>x.id==id);if(t){t.from=dayOff(1);t.at=null}});
+    else if(d.ba==='miss')missBlock(a,bb);
+    else if(d.ba==='tmr')postpone(id);
     else openTask(id);return}
   if(d.q){const v=$('qsIn').value;if(d.q==='add'){if(addQuick(v))closeSheet();else{hint('Écris d\'abord ce que tu dois faire.','err');$('qsIn').focus()}}else{const o=parseQuick(v);closeSheet();openTask(undefined,toPreset(o))}return}
   if(d.ex!==undefined){$('qsIn').value=d.ex;updChips('qsIn','qsChips');$('qsIn').focus();return}
   if(d.sh){if(d.sh==='cancel')closeSheet();else if(d.sh==='save')saveSheet();else if(d.sh==='del'){const id=draft.id,m=mode;act(m==='task'?'Tâche supprimée':m==='event'?'Plan fixe supprimé':'Matière supprimée',()=>{if(m==='task')st.tasks=st.tasks.filter(x=>x.id!=id);else if(m==='event')st.events=st.events.filter(x=>x.id!=id);else{st.cats=st.cats.filter(x=>x.id!=id);st.tasks.forEach(t=>{if(t.cat==id)t.cat=null});st.events.forEach(v=>{if(v.cat==id)v.cat=null})}});closeSheet()}return}
   if(d.st){draft.d=Math.min(480,Math.max(15,draft.d+ +d.st));$('fD').textContent=dur(draft.d);return}
+  if(d.tdy!==undefined){const w=+d.tdy;draft.rdays=draft.rdays.includes(w)?draft.rdays.filter(x=>x!==w):[...draft.rdays,w];b.setAttribute('aria-pressed',String(draft.rdays.includes(w)));return}
   if(d.dy!==undefined){const w=+d.dy;draft.days=draft.days.includes(w)?draft.days.filter(x=>x!==w):[...draft.days,w];b.setAttribute('aria-pressed',String(draft.days.includes(w)));return}
   if(d.cat!==undefined&&draft){draft.cat=d.cat===''?null:+d.cat;b.parentElement.querySelectorAll('[data-cat]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));return}
   if(d.col){draft[mode==='cat'?'c':'ncol']=d.col;b.parentElement.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));return}
@@ -1226,18 +1265,23 @@ document.addEventListener('click',e=>{
   if(d.v!==undefined){const g=b.parentElement,k=g.dataset.k;
     if(k==='rep'){keepEvent();draft.rep=d.v;if(d.v==='custom'&&!draft.days.length)draft.days=[new Date().getDay()];drawEvent();return}
     if(k==='when'){keepTask();draft.when=d.v;drawTask();return}
+    if(k==='trep'){keepTask();draft.trep=d.v;if(d.v==='custom'&&!draft.rdays.length)draft.rdays=[new Date().getDay()];drawTask();return}
     draft[k]=k==='e'?d.v:+d.v;g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));return}
   if(d.tab){if(d.wdgo!==undefined)ui.wd=+d.wdgo;go(d.tab);return}
   if(d.wd!==undefined){ui.wd=+d.wd;saveUi();render();return}
   if(d.seg){ui.seg=d.seg;saveUi();render();return}
   if(d.tdone){ui.showDone=!ui.showDone;saveUi();render();return}
+  if(d.catch){const n=nowM(),over=plan().blocks.filter(x=>x.k==='task'&&x.b<=n);
+    if(d.catch==='re')act(`Recalculé à partir de ${toT(n)}`,()=>{st.from=n});
+    else{const had=st.tasks.some(isOpen);act(`${over.length} créneau${over.length>1?'x':''} coché${over.length>1?'s':''}`,()=>{for(const x of over){const t=st.tasks.find(v=>v.id==x.t.id);if(!t)continue;const m=Math.min(t.left,x.b-x.a);t.left-=m;st.done.push({a:x.a,b:x.b,m,n:t.n,id:t.id,cat:t.cat})}st.from=Math.max(st.from??0,over[over.length-1].b)});if(had&&!st.tasks.some(isOpen))setTimeout(confetti,150)}
+    return}
   if(d.hero){if(d.hero==='focus')openTimer(+d.id,+d.a,+d.b);else if(d.hero==='done')markDone(+d.id,+d.a,+d.b);else if(d.hero==='review')openReview();else openQuick();return}
   if(d.done){b.classList.add('on');const id=+d.done,a=+d.a,bb=+d.b;setTimeout(()=>markDone(id,a,bb),260);return}
   if(d.fin){b.classList.toggle('on');const id=+d.fin;setTimeout(()=>finishTask(id),200);return}
   if(d.blk){openBlock(+d.blk,+d.a,+d.b,+d.day);return}
   if(d.f){act(null,()=>{st.focus=+d.f})}
   else if(d.pk){act(null,()=>{st.peak=d.pk})}
-  else if(d.tmr){act('Reportée à demain',()=>{const t=st.tasks.find(x=>x.id==d.tmr);if(t){t.from=dayOff(1);t.at=null}})}
+  else if(d.tmr){postpone(+d.tmr)}
   else if(d.back){act('Remise à aujourd\'hui',()=>{const t=st.tasks.find(x=>x.id==d.back);if(t){t.from=null;t.at=null}})}
   else if(d.edit)openTask(d.edit);
   else if(d.eedit)openEvent(d.eedit);
@@ -1252,7 +1296,7 @@ document.addEventListener('click',e=>{
   else if(b.id==='now'){const m=nowM();act(`Recalculé à partir de ${toT(Math.min(toM(st.end),Math.max(toM(st.start),m)))}`,()=>{st.from=m})}
   else if(b.id==='toCal')exportICS();
   else if(b.id==='copy')copyPlan();
-  else if(b.id==='restart')act('Journée recommencée',()=>{for(const x of st.done){const t=st.tasks.find(v=>v.id==x.id);if(t)t.left=Math.min(t.d,t.left+(x.b-x.a))}st.from=null;st.done=[]});
+  else if(b.id==='restart')act('Journée recommencée',()=>{for(const x of st.done){const t=st.tasks.find(v=>v.id==x.id);if(t)t.left=Math.min(t.d,t.left+(x.m??(x.b-x.a)))}st.from=null;st.done=[]});
   else if(b.id==='reset')act('Semaine exemple chargée',()=>{const nm=st.name;st=norm(sample());st.name=nm});
   else if(b.id==='wipe')act('Tout est effacé',()=>{const nm=st.name;st=norm(blank());st.name=nm});
 });
@@ -1266,7 +1310,12 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&id==='qaIn'){e.preventDefault();$('qaGo').click();return}
   if(e.key==='Enter'&&id==='nameIn'){e.target.blur();return}
   if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('tci')){e.preventDefault();const c=e.target;openBlock(+c.dataset.id,+c.dataset.a,+c.dataset.b,+c.dataset.day);return}
-  if($('scrim').hidden)return;
+  if($('scrim').hidden){
+    const typing=/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||e.target.isContentEditable;
+    if(typing||e.metaKey||e.ctrlKey||e.altKey)return;
+    if(e.key==='n'||e.key==='N'||e.key==='+'){e.preventDefault();openQuick()}
+    else if(e.key>='1'&&e.key<='4'){go(['today','week','tasks','me'][+e.key-1])}
+    return}
   if(e.key==='Escape')closeSheet();
   if(e.key==='Enter'&&id==='qsIn'){e.preventDefault();document.querySelector('[data-q="add"]').click()}
   if(e.key==='Enter'&&id==='fN'){e.preventDefault();saveSheet()}

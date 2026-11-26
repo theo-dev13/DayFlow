@@ -1,5 +1,5 @@
 // DayFlow service worker: keeps the app usable offline.
-const CACHE = 'dayflow-v5';
+const CACHE = 'dayflow-v6';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
